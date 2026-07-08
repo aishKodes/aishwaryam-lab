@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Project Thales: Triangle Detective Mission",
   description:
-    "A Class 10 NCERT Triangles smartboard game about similarity, Thales theorem, and indirect measurement."
+    "A Class 10 NCERT Triangles student activity about similarity, Thales theorem, and indirect measurement."
 };
 
 export default function RootLayout({

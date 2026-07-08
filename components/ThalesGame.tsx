@@ -1,49 +1,51 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { GamePhase, LevelId, ScoreEvent, Team } from "@/types/game";
+import { missions } from "@/data/missions";
+import type { GamePhase, LevelId, LevelResult, StudentProfile } from "@/types/game";
+import { TOTAL_POSSIBLE } from "@/lib/scoring";
 import { LabShell } from "@/components/ui/LabShell";
 import { ConfettiOverlay } from "@/components/ui/ConfettiOverlay";
-import { StartScreen } from "@/components/screens/StartScreen";
-import { TeamSetupScreen } from "@/components/screens/TeamSetupScreen";
-import { MissionMapScreen } from "@/components/screens/MissionMapScreen";
+import { StudentLandingScreen } from "@/components/screens/StudentLandingScreen";
+import { StudentMissionMapScreen } from "@/components/screens/StudentMissionMapScreen";
 import { LevelScreen } from "@/components/screens/LevelScreen";
-import { LeaderboardScreen } from "@/components/screens/LeaderboardScreen";
-import { FinalWinnerScreen } from "@/components/screens/FinalWinnerScreen";
+import { SubmittedScreen } from "@/components/screens/SubmittedScreen";
 
-const STORAGE_KEY = "project-thales-state-v1";
+const STORAGE_KEY = "project-thales-student-state-v1";
 
 type StoredGameState = {
-  teams: Team[];
-  completedLevels: LevelId[];
-  currentTeamIndex: number;
+  profile: StudentProfile;
+  results: Partial<Record<LevelId, LevelResult>>;
+  startedAt: string;
+  submitted: boolean;
 };
 
-const defaultTeams: Team[] = [
-  { id: "team-1", name: "Team 1", score: 0 },
-  { id: "team-2", name: "Team 2", score: 0 }
-];
+const emptyProfile: StudentProfile = {
+  studentName: "",
+  rollNumber: ""
+};
 
 export function ThalesGame() {
-  const [phase, setPhase] = useState<GamePhase>("start");
-  const [teams, setTeams] = useState<Team[]>(defaultTeams);
-  const [completedLevels, setCompletedLevels] = useState<LevelId[]>([]);
-  const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
+  const [phase, setPhase] = useState<GamePhase>("landing");
+  const [profile, setProfile] = useState<StudentProfile>(emptyProfile);
+  const [results, setResults] = useState<Partial<Record<LevelId, LevelResult>>>({});
+  const [startedAt, setStartedAt] = useState("");
   const [currentLevelId, setCurrentLevelId] = useState<LevelId>(1);
-  const [scoreEvent, setScoreEvent] = useState<ScoreEvent | null>(null);
-  const [levelDeltas, setLevelDeltas] = useState<Record<string, number>>({});
   const [hydrated, setHydrated] = useState(false);
   const [confettiActive, setConfettiActive] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as StoredGameState;
-        if (Array.isArray(parsed.teams) && parsed.teams.length >= 2) {
-          setTeams(parsed.teams);
-          setCompletedLevels(parsed.completedLevels ?? []);
-          setCurrentTeamIndex(parsed.currentTeamIndex ?? 0);
+        if (parsed.profile?.studentName && parsed.profile?.rollNumber) {
+          setProfile(parsed.profile);
+          setResults(parsed.results ?? {});
+          setStartedAt(parsed.startedAt || new Date().toISOString());
+          setPhase(parsed.submitted ? "submitted" : "landing");
         }
       }
     } catch {
@@ -54,171 +56,171 @@ export function ThalesGame() {
   }, []);
 
   useEffect(() => {
-    if (!hydrated) {
+    if (!hydrated || !profile.studentName || !profile.rollNumber || !startedAt) {
       return;
     }
 
-    const safeTeamIndex = Math.min(Math.max(currentTeamIndex, 0), Math.max(teams.length - 1, 0));
     const state: StoredGameState = {
-      teams,
-      completedLevels,
-      currentTeamIndex: safeTeamIndex
+      profile,
+      results,
+      startedAt,
+      submitted: phase === "submitted"
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [completedLevels, currentTeamIndex, hydrated, teams]);
+  }, [hydrated, phase, profile, results, startedAt]);
 
-  const hasSavedGame = useMemo(() => {
-    return teams.some((team) => team.score !== 0) || completedLevels.length > 0;
-  }, [completedLevels.length, teams]);
+  const score = useMemo(() => {
+    return Object.values(results).reduce((total, result) => total + (result?.score ?? 0), 0);
+  }, [results]);
 
-  function startNewMission() {
-    setScoreEvent(null);
-    setCompletedLevels([]);
-    setCurrentTeamIndex(0);
-    setPhase("setup");
-  }
+  const hasProgress = useMemo(() => {
+    return Boolean(profile.studentName && profile.rollNumber && startedAt);
+  }, [profile.rollNumber, profile.studentName, startedAt]);
 
-  function launchTeams(nextTeams: Team[]) {
-    setTeams(nextTeams);
-    setCompletedLevels([]);
-    setCurrentTeamIndex(0);
-    setScoreEvent(null);
-    setLevelDeltas(createEmptyDeltas(nextTeams));
+  function startMission(nextProfile: StudentProfile) {
+    setProfile(nextProfile);
+    setResults({});
+    setStartedAt(new Date().toISOString());
+    setCurrentLevelId(1);
+    setSubmitError(null);
     setPhase("map");
   }
 
-  function continueSavedMission() {
-    setPhase(completedLevels.length === 5 ? "final" : "map");
+  function resumeMission() {
+    if (!profile.studentName || !profile.rollNumber) {
+      return;
+    }
+
+    setSubmitError(null);
+    setPhase("map");
   }
 
   function startLevel(levelId: LevelId) {
     setCurrentLevelId(levelId);
-    setLevelDeltas(createEmptyDeltas(teams));
-    setScoreEvent(null);
+    setSubmitError(null);
     setPhase("level");
   }
 
-  function awardScore(delta: number, label: string) {
-    const currentTeam = teams[currentTeamIndex] ?? teams[0];
-    if (!currentTeam) {
+  function completeLevel(result: LevelResult) {
+    setResults((current) => ({
+      ...current,
+      [result.levelId]: result
+    }));
+
+    if (result.correct) {
+      setConfettiActive(true);
+      window.setTimeout(() => setConfettiActive(false), 2800);
+    }
+
+    setPhase("map");
+  }
+
+  async function submitFinalResult() {
+    const apiBase = process.env.NEXT_PUBLIC_RESULTS_API_BASE?.replace(/\/+$/, "");
+    const orderedResults = missions
+      .map((mission) => results[mission.id])
+      .filter((result): result is LevelResult => Boolean(result));
+
+    if (orderedResults.length !== missions.length) {
+      setSubmitError("Complete all five missions before submitting.");
       return;
     }
 
-    const event: ScoreEvent = {
-      id: Date.now(),
-      teamId: currentTeam.id,
-      teamName: currentTeam.name,
-      delta,
-      label
-    };
-
-    setTeams((currentTeams) =>
-      currentTeams.map((team) =>
-        team.id === currentTeam.id ? { ...team, score: team.score + delta } : team
-      )
-    );
-    setLevelDeltas((current) => ({
-      ...current,
-      [currentTeam.id]: (current[currentTeam.id] ?? 0) + delta
-    }));
-    setScoreEvent(event);
-  }
-
-  function nextTeam() {
-    setCurrentTeamIndex((index) => {
-      if (teams.length === 0) {
-        return 0;
-      }
-
-      return (index + 1) % teams.length;
-    });
-  }
-
-  function completeLevel(perfect: boolean) {
-    setCompletedLevels((current) => {
-      if (current.includes(currentLevelId)) {
-        return current;
-      }
-
-      return [...current, currentLevelId].sort((a, b) => a - b) as LevelId[];
-    });
-
-    if (perfect) {
-      setConfettiActive(true);
-      window.setTimeout(() => setConfettiActive(false), 3000);
+    if (!apiBase) {
+      setSubmitError("Missing NEXT_PUBLIC_RESULTS_API_BASE. Set it in Vercel before final submission.");
+      return;
     }
 
-    setPhase("leaderboard");
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const response = await fetch(`${apiBase}/submit.php`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          student_name: profile.studentName,
+          roll_number: profile.rollNumber,
+          score,
+          total_possible: TOTAL_POSSIBLE,
+          answers: {
+            levels: orderedResults,
+            score,
+            totalPossible: TOTAL_POSSIBLE
+          },
+          started_at: startedAt
+        })
+      });
+
+      if (!response.ok) {
+        let message = "Could not submit result. Please try again.";
+        try {
+          const data = (await response.json()) as { error?: string };
+          if (data.error) {
+            message = data.error;
+          }
+        } catch {
+          // Keep the generic message when the server does not return JSON.
+        }
+        throw new Error(message);
+      }
+
+      setPhase("submitted");
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Could not submit result. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function resetGame() {
     window.localStorage.removeItem(STORAGE_KEY);
-    setTeams(defaultTeams);
-    setCompletedLevels([]);
-    setCurrentTeamIndex(0);
+    setProfile(emptyProfile);
+    setResults({});
+    setStartedAt("");
     setCurrentLevelId(1);
-    setScoreEvent(null);
-    setLevelDeltas({});
-    setPhase("start");
+    setSubmitError(null);
+    setIsSubmitting(false);
+    setPhase("landing");
   }
-
-  const allComplete = completedLevels.length === 5;
 
   return (
     <LabShell>
       <ConfettiOverlay active={confettiActive} />
-      {phase === "start" ? (
-        <StartScreen
-          hasSavedGame={hydrated && hasSavedGame}
-          onStartNew={startNewMission}
-          onContinue={continueSavedMission}
-        />
-      ) : null}
-      {phase === "setup" ? (
-        <TeamSetupScreen
-          teams={teams}
-          onBack={() => setPhase("start")}
-          onLaunch={launchTeams}
+      {phase === "landing" ? (
+        <StudentLandingScreen
+          initialProfile={profile}
+          hasProgress={hydrated && hasProgress}
+          onStart={startMission}
+          onResume={resumeMission}
         />
       ) : null}
       {phase === "map" ? (
-        <MissionMapScreen
-          teams={teams}
-          completedLevels={completedLevels}
+        <StudentMissionMapScreen
+          profile={profile}
+          results={results}
+          score={score}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
           onStartLevel={startLevel}
-          onFinal={() => setPhase("final")}
+          onSubmitFinal={submitFinalResult}
+          onReset={resetGame}
         />
       ) : null}
       {phase === "level" ? (
         <LevelScreen
           levelId={currentLevelId}
-          teams={teams}
-          currentTeamIndex={Math.min(currentTeamIndex, Math.max(teams.length - 1, 0))}
-          scoreEvent={scoreEvent}
-          onAwardScore={awardScore}
-          onNextTeam={nextTeam}
+          profile={profile}
+          score={score}
           onComplete={completeLevel}
           onBackToMap={() => setPhase("map")}
         />
       ) : null}
-      {phase === "leaderboard" ? (
-        <LeaderboardScreen
-          teams={teams}
-          levelId={currentLevelId}
-          levelDeltas={levelDeltas}
-          allComplete={allComplete}
-          onContinue={() => setPhase("map")}
-          onFinal={() => setPhase("final")}
-        />
+      {phase === "submitted" ? (
+        <SubmittedScreen profile={profile} score={score} onReset={resetGame} />
       ) : null}
-      {phase === "final" ? <FinalWinnerScreen teams={teams} onReset={resetGame} /> : null}
     </LabShell>
   );
-}
-
-function createEmptyDeltas(teams: Team[]) {
-  return teams.reduce<Record<string, number>>((accumulator, team) => {
-    accumulator[team.id] = 0;
-    return accumulator;
-  }, {});
 }

@@ -3,8 +3,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { Check, Eye, Send } from "lucide-react";
 import { criterionLabels, numericMissions } from "@/data/missions";
-import type { Criterion, FeedbackTone, LevelId } from "@/types/game";
-import { SCORE, formatDelta, isCloseNumber } from "@/lib/scoring";
+import type { Criterion, FeedbackTone, LevelId, LevelResult } from "@/types/game";
+import { LEVEL_TOTAL, NUMERIC_SCORE, isCloseNumber } from "@/lib/scoring";
 import { cn } from "@/lib/cn";
 import { useMissionHotkeys } from "@/hooks/useMissionHotkeys";
 import { SmartButton } from "@/components/ui/SmartButton";
@@ -14,25 +14,18 @@ import { ThalesGateDiagram } from "@/components/visuals/ThalesGateDiagram";
 
 type NumericMissionPanelProps = {
   levelId: Extract<LevelId, 2 | 3 | 5>;
-  onAwardScore: (delta: number, label: string) => void;
-  onNextTeam: () => void;
-  onComplete: (perfect: boolean) => void;
+  onComplete: (result: LevelResult) => void;
 };
 
 type NumericFeedback = {
   title: string;
   tone: FeedbackTone;
-  delta: number;
+  score: number;
   perfect: boolean;
   lines: string[];
 };
 
-export function NumericMissionPanel({
-  levelId,
-  onAwardScore,
-  onNextTeam,
-  onComplete
-}: NumericMissionPanelProps) {
+export function NumericMissionPanel({ levelId, onComplete }: NumericMissionPanelProps) {
   const mission = numericMissions[levelId];
   const [answer, setAnswer] = useState("");
   const [theorem, setTheorem] = useState<Criterion | null>(null);
@@ -40,20 +33,27 @@ export function NumericMissionPanel({
   const [feedback, setFeedback] = useState<NumericFeedback | null>(null);
   const [revealOpen, setRevealOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [lastPerfect, setLastPerfect] = useState(false);
+  const [lastResult, setLastResult] = useState<LevelResult | null>(null);
 
   const answerValue = Number(answer);
   const diagram = useMemo(() => {
     if (levelId === 3) {
-      return <ThalesGateDiagram unlocked={lastPerfect || revealOpen} />;
+      return <ThalesGateDiagram unlocked={Boolean(lastResult?.correct) || revealOpen} />;
     }
 
-    return <ShadowDiagram mode={levelId === 2 ? "tower" : "monument"} reveal={lastPerfect || revealOpen} />;
-  }, [lastPerfect, levelId, revealOpen]);
+    return (
+      <ShadowDiagram
+        mode={levelId === 2 ? "tower" : "monument"}
+        reveal={Boolean(lastResult?.correct) || revealOpen}
+      />
+    );
+  }, [lastResult?.correct, levelId, revealOpen]);
 
   const submitAnswer = useCallback(() => {
     if (submitted) {
-      onComplete(lastPerfect);
+      if (lastResult) {
+        onComplete(lastResult);
+      }
       return;
     }
 
@@ -61,70 +61,94 @@ export function NumericMissionPanel({
     const theoremCorrect = theorem === mission.correctTheorem;
     const correspondenceCorrect = correspondence === mission.correctCorrespondence;
     const trap = !answerCorrect && mission.trapAnswers.some((value) => isCloseNumber(answerValue, value, 0.05));
-
-    const delta =
-      (answerCorrect ? SCORE.correctAnswer : 0) +
-      (theoremCorrect ? SCORE.correctTheorem : 0) +
-      (correspondenceCorrect ? SCORE.correctCorrespondence : 0) +
-      (trap ? SCORE.trapMistake : 0);
-
+    const score =
+      (answerCorrect ? NUMERIC_SCORE.answer : 0) +
+      (theoremCorrect ? NUMERIC_SCORE.theorem : 0) +
+      (correspondenceCorrect ? NUMERIC_SCORE.correspondence : 0);
     const perfect = answerCorrect && theoremCorrect && correspondenceCorrect;
+
     const lines = [
-      answerCorrect ? "Answer accepted: correct measurement." : `Answer rejected: expected ${mission.correctAnswer} ${mission.inputSuffix}.`,
-      theoremCorrect ? `Theorem accepted: ${criterionLabels[mission.correctTheorem]}.` : "Theorem rejected: check the condition being used.",
-      correspondenceCorrect ? "Correspondence accepted: matching lengths were paired correctly." : "Correspondence rejected: pair height with height and matching side parts with matching side parts."
+      answerCorrect
+        ? "Answer accepted: correct measurement."
+        : `Answer rejected: expected ${mission.correctAnswer} ${mission.inputSuffix}.`,
+      theoremCorrect
+        ? `Theorem accepted: ${criterionLabels[mission.correctTheorem]}.`
+        : "Theorem rejected: check the condition being used.",
+      correspondenceCorrect
+        ? "Correspondence accepted: matching lengths were paired correctly."
+        : "Correspondence rejected: pair the corresponding sides in the same order."
     ];
 
     if (trap) {
-      lines.push("Trap penalty: the ratio was inverted or mismatched.");
+      lines.push("Trap note: this answer matches a common inverted or mismatched ratio.");
     }
 
-    onAwardScore(delta, mission.inputLabel);
+    const result: LevelResult = {
+      levelId,
+      title: mission.id === 2 ? "Shadow Machine" : mission.id === 3 ? "Thales Laser Gate" : "Boss Mission",
+      score,
+      total: LEVEL_TOTAL,
+      correct: perfect,
+      summary: perfect
+        ? "Answer, theorem, and correspondence were all correct."
+        : "One or more pieces of evidence need review.",
+      answers: {
+        kind: "numeric",
+        enteredAnswer: answer,
+        numericAnswer: answerValue,
+        correctAnswer: mission.correctAnswer,
+        selectedTheorem: theorem,
+        correctTheorem: mission.correctTheorem,
+        selectedCorrespondence: correspondence,
+        correctCorrespondence: mission.correctCorrespondence,
+        answerCorrect,
+        theoremCorrect,
+        correspondenceCorrect,
+        trap,
+        equation: mission.equation
+      },
+      completedAt: new Date().toISOString()
+    };
+
     setSubmitted(true);
-    setLastPerfect(perfect);
+    setLastResult(result);
     setFeedback({
-      title: perfect ? "Mission solved" : delta > 0 ? "Partial evidence accepted" : trap ? "Trap mistake" : "Evidence rejected",
-      tone: perfect ? "success" : delta > 0 ? "warning" : trap ? "warning" : "danger",
-      delta,
+      title: perfect ? "Mission solved" : score > 0 ? "Partial evidence accepted" : trap ? "Trap mistake" : "Evidence rejected",
+      tone: perfect ? "success" : score > 0 ? "warning" : trap ? "warning" : "danger",
+      score,
       perfect,
       lines
     });
-  }, [
-    answerValue,
-    correspondence,
-    lastPerfect,
-    mission,
-    onAwardScore,
-    onComplete,
-    submitted,
-    theorem
-  ]);
+  }, [answer, answerValue, correspondence, lastResult, levelId, mission, onComplete, submitted, theorem]);
 
   const revealSolution = useCallback(() => {
     setRevealOpen(true);
   }, []);
 
   useMissionHotkeys({
-    onNext: onNextTeam,
     onReveal: revealSolution,
     onSubmit: submitAnswer
   });
 
   return (
     <div className="grid flex-1 gap-4 xl:grid-cols-[0.96fr_1.04fr]">
-      <section className="glass-panel rounded-xl p-4 sm:p-5">
+      <section className="glass-panel rounded-xl p-3 sm:p-5">
         {diagram}
       </section>
 
-      <section className="glass-panel flex flex-col rounded-xl p-5">
-        <div className="rounded-xl border border-slate-600/35 bg-slate-950/50 p-5">
+      <section className="glass-panel flex flex-col rounded-xl p-4 sm:p-5">
+        <div className="rounded-xl border border-slate-600/35 bg-slate-950/50 p-4 sm:p-5">
           <p className="text-sm font-bold uppercase text-cyan-200">Challenge</p>
-          <p className="mt-2 text-xl leading-9 text-slate-100">{mission.problem}</p>
+          <p className="mt-2 text-lg leading-8 text-slate-100 sm:text-xl sm:leading-9">
+            {mission.problem}
+          </p>
         </div>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
           <label className="rounded-xl border border-slate-600/35 bg-slate-950/50 p-4">
-            <span className="mb-2 block text-sm font-bold uppercase text-slate-400">{mission.inputLabel}</span>
+            <span className="mb-2 block text-sm font-bold uppercase text-slate-400">
+              {mission.inputLabel}
+            </span>
             <div className="flex items-center gap-3">
               <input
                 className="min-h-16 w-full rounded-lg border border-cyan-300/35 bg-slate-950/80 px-4 font-mono text-3xl font-black text-white placeholder:text-slate-600"
@@ -197,7 +221,7 @@ export function NumericMissionPanel({
             variant={submitted ? "success" : "primary"}
             onClick={submitAnswer}
           >
-            {submitted ? "Finish Mission" : "Submit"}
+            {submitted ? "Save Level" : "Submit"}
           </SmartButton>
         </div>
       </section>
@@ -211,7 +235,7 @@ export function NumericMissionPanel({
         <div className="space-y-2">
           {feedback?.lines.map((line) => <p key={line}>{line}</p>)}
         </div>
-        <p className="font-mono text-cyan-100">Score change: {formatDelta(feedback?.delta ?? 0)}</p>
+        <p className="font-mono text-cyan-100">Level score: {feedback?.score ?? 0}/100</p>
       </FeedbackModal>
 
       <FeedbackModal

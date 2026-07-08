@@ -1,23 +1,54 @@
 # Project Thales: Triangle Detective Mission
 
-A premium interactive classroom smartboard game for Class 10 NCERT Mathematics, focused on the Triangles chapter.
+A premium individual smartphone activity for Class 10 NCERT Mathematics, focused on the Triangles chapter.
 
-## Features
+## Architecture
 
-- Next.js App Router with TypeScript
-- Tailwind CSS premium dark science-lab interface
-- Framer Motion transitions, hover/tap states, score animation, and confetti
-- Original SVG diagrams for similarity, shadow measurement, Thales theorem, and triangle criteria
-- Team setup for 2 to 6 teams
-- localStorage persistence for team names, scores, completed levels, and current team
-- Teacher reveal button on every level
-- Next team button for classroom turns
-- Keyboard shortcuts:
-  - `N`: next team
-  - `R`: teacher reveal
-  - `Enter`: submit or finish a mission
+- Frontend: Next.js App Router, TypeScript, Tailwind CSS, Framer Motion
+- Hosting: Vercel
+- Backend API: Hostinger PHP files in `hostinger-thales-api/`
+- Database: Hostinger MySQL
+- Frontend environment variable: `NEXT_PUBLIC_RESULTS_API_BASE`
 
-## Levels
+Example:
+
+```text
+NEXT_PUBLIC_RESULTS_API_BASE=https://pixtra.site/thales-api
+```
+
+## Student Flow
+
+1. Student opens the Vercel game link on their own device.
+2. Student enters only:
+   - Full Name
+   - Roll Number
+3. Student completes all five missions.
+4. Student submits the final result.
+5. The app posts to `${NEXT_PUBLIC_RESULTS_API_BASE}/submit.php`.
+6. Student sees submitted success and only their own score.
+
+No contact number is collected. No class-wide marks are shown to students.
+
+## Teacher Flow
+
+Open:
+
+```text
+/teacher
+```
+
+After entering the teacher PIN, the dashboard:
+
+- Fetches results from `teacher-results.php`
+- Shows roll number, student name, score, total possible, and submitted time
+- Supports search by name or roll number
+- Supports refresh
+- Exports CSV through `export.php`
+- Expands rows to show level-wise answer JSON
+
+Teacher data is not available from the frontend without a successful PIN-protected PHP request.
+
+## Game Content
 
 1. Similar or Imposter
 2. Shadow Machine
@@ -25,13 +56,17 @@ A premium interactive classroom smartboard game for Class 10 NCERT Mathematics, 
 4. Similarity Courtroom
 5. Boss Mission - Measure the Unmeasurable
 
+The activity covers similar figures, all circles/squares/equilateral triangles being similar, similar polygon conditions, Basic Proportionality Theorem / Thales theorem, converse ideas, AA/AAA, SSS, SAS, and shadow-based indirect measurement.
+
 ## Scoring
 
-- Correct answer: +100
-- Correct theorem / criterion: +50
-- Correct triangle correspondence: +50
-- Trap mistake: -20
-- Wrong answer: 0
+Total possible: 500 marks
+
+- Each level is worth 100 marks.
+- Level 1 is prorated across 7 classification cards.
+- Level 4 is prorated across 4 similarity cases.
+- Numeric levels split marks across answer, theorem/criterion, and correspondence.
+- Level-wise answer details are stored as JSON in MySQL.
 
 ## Run Locally
 
@@ -40,28 +75,38 @@ npm install
 npm run dev
 ```
 
-Open the local URL shown by Next.js, usually:
+Open:
 
 ```text
 http://localhost:3000
 ```
 
+For local API testing, create `.env.local`:
+
+```text
+NEXT_PUBLIC_RESULTS_API_BASE=https://pixtra.site/thales-api
+```
+
 ## Production Build
 
 ```bash
-npm run build
-npm run start
-```
-
-## Deploy
-
-The app has no backend and can be deployed to any Next.js host.
-
-For Vercel:
-
-```bash
-npm install
+npm run lint
 npm run build
 ```
 
-Then import the repository in Vercel and deploy with the default Next.js settings.
+## Deploy Frontend To Vercel
+
+1. Import the repo in Vercel.
+2. Add `NEXT_PUBLIC_RESULTS_API_BASE` in Vercel environment variables.
+3. Deploy with default Next.js settings.
+
+## Deploy Hostinger API
+
+See [hostinger-thales-api/README.md](/Users/aishwaryam/aishwaryam-lab/hostinger-thales-api/README.md) for:
+
+- MySQL schema
+- `config.php` setup
+- Hostinger upload location
+- CORS allowed origins
+- submit testing
+- teacher dashboard usage

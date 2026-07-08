@@ -1,32 +1,26 @@
 "use client";
 
-import { ArrowLeft, Map } from "lucide-react";
+import { ArrowLeft, Map, UserRound } from "lucide-react";
 import { missions } from "@/data/missions";
-import type { LevelId, ScoreEvent, Team } from "@/types/game";
+import type { LevelId, LevelResult, StudentProfile } from "@/types/game";
+import { TOTAL_POSSIBLE } from "@/lib/scoring";
 import { SmartButton } from "@/components/ui/SmartButton";
-import { TeamTurnBar } from "@/components/ui/TeamTurnBar";
 import { ClassificationMission } from "@/components/missions/ClassificationMission";
 import { NumericMissionPanel } from "@/components/missions/NumericMissionPanel";
 import { CourtroomMission } from "@/components/missions/CourtroomMission";
 
 type LevelScreenProps = {
   levelId: LevelId;
-  teams: Team[];
-  currentTeamIndex: number;
-  scoreEvent: ScoreEvent | null;
-  onAwardScore: (delta: number, label: string) => void;
-  onNextTeam: () => void;
-  onComplete: (perfect: boolean) => void;
+  profile: StudentProfile;
+  score: number;
+  onComplete: (result: LevelResult) => void;
   onBackToMap: () => void;
 };
 
 export function LevelScreen({
   levelId,
-  teams,
-  currentTeamIndex,
-  scoreEvent,
-  onAwardScore,
-  onNextTeam,
+  profile,
+  score,
   onComplete,
   onBackToMap
 }: LevelScreenProps) {
@@ -42,48 +36,39 @@ export function LevelScreen({
               Mission {mission.id}: {mission.badge}
             </div>
             <h1 className="text-3xl font-black sm:text-5xl">{mission.title}</h1>
-            <p className="mt-2 max-w-5xl text-lg leading-8 text-slate-300">{mission.briefing}</p>
+            <p className="mt-2 max-w-5xl text-base leading-7 text-slate-300 sm:text-lg sm:leading-8">
+              {mission.briefing}
+            </p>
           </div>
-          <SmartButton
-            variant="ghost"
-            size="md"
-            icon={<ArrowLeft className="h-5 w-5" />}
-            onClick={onBackToMap}
-          >
-            Map
-          </SmartButton>
+          <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[420px]">
+            <div className="rounded-xl border border-slate-600/35 bg-slate-950/50 p-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-cyan-300/30 bg-cyan-300/10 text-cyan-100">
+                  <UserRound className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-lg font-black text-white">{profile.studentName}</p>
+                  <p className="font-mono text-xs text-slate-400">Roll: {profile.rollNumber}</p>
+                </div>
+              </div>
+            </div>
+            <SmartButton
+              variant="ghost"
+              size="md"
+              icon={<ArrowLeft className="h-5 w-5" />}
+              onClick={onBackToMap}
+            >
+              Map {score}/{TOTAL_POSSIBLE}
+            </SmartButton>
+          </div>
         </div>
       </div>
 
-      <TeamTurnBar
-        teams={teams}
-        currentTeamIndex={currentTeamIndex}
-        onNextTeam={onNextTeam}
-        scoreEvent={scoreEvent}
-      />
-
-      {levelId === 1 ? (
-        <ClassificationMission
-          onAwardScore={onAwardScore}
-          onNextTeam={onNextTeam}
-          onComplete={onComplete}
-        />
-      ) : null}
+      {levelId === 1 ? <ClassificationMission onComplete={onComplete} /> : null}
       {levelId === 2 || levelId === 3 || levelId === 5 ? (
-        <NumericMissionPanel
-          levelId={levelId}
-          onAwardScore={onAwardScore}
-          onNextTeam={onNextTeam}
-          onComplete={onComplete}
-        />
+        <NumericMissionPanel levelId={levelId} onComplete={onComplete} />
       ) : null}
-      {levelId === 4 ? (
-        <CourtroomMission
-          onAwardScore={onAwardScore}
-          onNextTeam={onNextTeam}
-          onComplete={onComplete}
-        />
-      ) : null}
+      {levelId === 4 ? <CourtroomMission onComplete={onComplete} /> : null}
     </section>
   );
 }
