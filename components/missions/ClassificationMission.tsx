@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Check, Eye, Send, ShieldQuestion } from "lucide-react";
+import { Check, Send, ShieldQuestion } from "lucide-react";
 import { classificationCards, classificationLabels } from "@/data/missions";
 import type { Classification, FeedbackTone, LevelResult } from "@/types/game";
 import { LEVEL_TOTAL, clampScore } from "@/lib/scoring";
@@ -19,7 +19,6 @@ type CardResponse = {
   cardId: string;
   prompt: string;
   selected: Classification;
-  correctAnswer: Classification;
   isCorrect: boolean;
   trap: boolean;
 };
@@ -38,7 +37,6 @@ export function ClassificationMission({ onComplete }: ClassificationMissionProps
   const [selected, setSelected] = useState<Classification | null>(null);
   const [responses, setResponses] = useState<CardResponse[]>([]);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
-  const [revealOpen, setRevealOpen] = useState(false);
   const [done, setDone] = useState(false);
 
   const currentCard = classificationCards[index];
@@ -61,7 +59,6 @@ export function ClassificationMission({ onComplete }: ClassificationMissionProps
       cardId: currentCard.id,
       prompt: currentCard.title,
       selected,
-      correctAnswer: currentCard.answer,
       isCorrect,
       trap
     };
@@ -70,17 +67,14 @@ export function ClassificationMission({ onComplete }: ClassificationMissionProps
     setFeedback({
       title: isCorrect ? "Evidence accepted" : trap ? "Trap detected" : "Verdict rejected",
       tone: isCorrect ? "success" : trap ? "warning" : "danger",
-      body: currentCard.explanation,
+      body: isCorrect
+        ? "Correct. Your classification has been recorded."
+        : "Not correct. Hint: use equal corresponding angles and proportional corresponding sides, not just appearance.",
       isCorrect
     });
   }, [currentCard, done, feedback, selected]);
 
-  const revealCurrent = useCallback(() => {
-    setRevealOpen(true);
-  }, []);
-
   useMissionHotkeys({
-    onReveal: revealCurrent,
     onSubmit: submitChoice
   });
 
@@ -197,14 +191,6 @@ export function ClassificationMission({ onComplete }: ClassificationMissionProps
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
           <SmartButton
             className="flex-1"
-            variant="ghost"
-            icon={<Eye className="h-6 w-6" />}
-            onClick={revealCurrent}
-          >
-            Teacher Reveal
-          </SmartButton>
-          <SmartButton
-            className="flex-1"
             icon={<Send className="h-6 w-6" />}
             disabled={!selected}
             onClick={submitChoice}
@@ -228,16 +214,6 @@ export function ClassificationMission({ onComplete }: ClassificationMissionProps
         <p className="font-mono text-cyan-100">
           Card status: {feedback?.isCorrect ? "correct" : "incorrect"}
         </p>
-      </FeedbackModal>
-
-      <FeedbackModal
-        open={revealOpen}
-        tone="info"
-        title="Teacher reveal"
-        footer={<SmartButton onClick={() => setRevealOpen(false)}>Close</SmartButton>}
-      >
-        <p>Correct classification: {classificationLabels[currentCard.answer]}</p>
-        <p>{currentCard.explanation}</p>
       </FeedbackModal>
     </div>
   );

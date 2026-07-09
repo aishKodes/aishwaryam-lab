@@ -15,34 +15,30 @@ const IP_HASH_SALT = 'CHANGE_ME_LONG_RANDOM_IP_HASH_SALT';
 
 // Add your deployed Vercel URL here, for example: https://project-thales.vercel.app
 const ALLOWED_ORIGINS = [
+    'https://aishwaryam-lab.vercel.app',
+    'https://pixtra.site',
+    'https://www.pixtra.site',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
-    'https://YOUR-VERCEL-PROJECT.vercel.app',
 ];
-
-send_cors_headers();
 
 function send_cors_headers(): void
 {
     $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-    $allowedOrigin = '';
 
     if ($origin !== '' && in_array($origin, ALLOWED_ORIGINS, true)) {
-        $allowedOrigin = $origin;
-    }
-
-    if ($origin !== '' && preg_match('#^https?://(localhost|127\.0\.0\.1)(:\d+)?$#', $origin) === 1) {
-        $allowedOrigin = $origin;
-    }
-
-    if ($allowedOrigin !== '') {
-        header('Access-Control-Allow-Origin: ' . $allowedOrigin);
+        header('Access-Control-Allow-Origin: ' . $origin);
         header('Vary: Origin');
     }
 
-    header('Access-Control-Allow-Methods: POST, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type');
+    header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
     header('Access-Control-Max-Age: 86400');
+}
+
+function handle_preflight(): void
+{
+    send_cors_headers();
 
     if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
         http_response_code(204);
@@ -87,6 +83,7 @@ function read_json_or_form_body(): array
 
 function json_response(array $payload, int $statusCode = 200): void
 {
+    send_cors_headers();
     http_response_code($statusCode);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);

@@ -28,10 +28,7 @@ export type NumericMission = {
   correctCorrespondence: string;
   theoremOptions: Array<{ id: Criterion; label: string }>;
   correspondenceOptions: Array<{ id: string; label: string }>;
-  equation: string[];
   trapAnswers: number[];
-  revealTitle: string;
-  revealBody: string;
 };
 
 export type CourtCase = {
@@ -202,11 +199,7 @@ export const numericMissions: Record<2 | 3 | 5, NumericMission> = {
         label: "Both shadows correspond to both heights"
       }
     ],
-    equation: ["6 / 4 = x / 28", "x = 42 m"],
-    trapAnswers: [18.67, 0.86, 24],
-    revealTitle: "Shadow Machine solution",
-    revealBody:
-      "The sun angle is the same for both objects, so the two right triangles are similar by AA. Match height with height and shadow with shadow."
+    trapAnswers: [18.67, 0.86, 24]
   },
   3: {
     id: 3,
@@ -232,11 +225,7 @@ export const numericMissions: Record<2 | 3 | 5, NumericMission> = {
         label: "AD / EC = DB / AE"
       }
     ],
-    equation: ["AD / DB = AE / EC", "3 / 2 = 6 / EC", "EC = 4"],
-    trapAnswers: [9, 12, 1],
-    revealTitle: "Laser Gate solution",
-    revealBody:
-      "By the Basic Proportionality Theorem, a line parallel to one side of a triangle divides the other two sides in the same ratio."
+    trapAnswers: [9, 12, 1]
   },
   5: {
     id: 5,
@@ -262,11 +251,7 @@ export const numericMissions: Record<2 | 3 | 5, NumericMission> = {
         label: "All bases correspond to all heights"
       }
     ],
-    equation: ["1.5 / 2 = x / 18", "x = 13.5 m"],
-    trapAnswers: [24, 12, 0.17],
-    revealTitle: "Boss Mission solution",
-    revealBody:
-      "The student and monument form two similar right triangles under the same sunlight angle. Keep height over shadow in both ratios."
+    trapAnswers: [24, 12, 0.17]
   }
 };
 

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
 
+handle_preflight();
 require_post();
 $data = read_json_or_form_body();
 require_teacher_pin($data);
@@ -16,6 +17,7 @@ try {
     );
     $statement->execute();
 
+    send_cors_headers();
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="triangle-game-results.csv"');
 

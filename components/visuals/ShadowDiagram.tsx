@@ -2,10 +2,9 @@
 
 type ShadowDiagramProps = {
   mode: "tower" | "monument";
-  reveal?: boolean;
 };
 
-export function ShadowDiagram({ mode, reveal = false }: ShadowDiagramProps) {
+export function ShadowDiagram({ mode }: ShadowDiagramProps) {
   const smallHeight = mode === "tower" ? "6 m" : "1.5 m";
   const smallShadow = mode === "tower" ? "4 m" : "2 m";
   const largeShadow = mode === "tower" ? "28 m" : "18 m";
@@ -40,20 +39,13 @@ export function ShadowDiagram({ mode, reveal = false }: ShadowDiagramProps) {
       <g fill="#dbeafe" fontFamily="monospace" fontSize="22" fontWeight="700">
         <text x="94" y="250">{smallHeight}</text>
         <text x="193" y="352">{smallShadow}</text>
-        <text x="426" y="203">{reveal ? (mode === "tower" ? "42 m" : "13.5 m") : "x m"}</text>
+        <text x="426" y="203">x m</text>
         <text x="536" y="352">{largeShadow}</text>
       </g>
       <g fill="#a5f3fc" fontFamily="monospace" fontSize="18" fontWeight="700">
         <text x="122" y="174">{mode === "tower" ? "Pole" : "Student"}</text>
         <text x="454" y="62">{largeLabel}</text>
       </g>
-      {reveal ? (
-        <g>
-          <path d="M162 188 A36 36 0 0 1 196 204" fill="none" stroke="#34d399" strokeWidth="4" />
-          <path d="M490 82 A52 52 0 0 1 536 106" fill="none" stroke="#34d399" strokeWidth="4" />
-          <text x="298" y="116" fill="#34d399" fontFamily="monospace" fontSize="20" fontWeight="800">AA similarity</text>
-        </g>
-      ) : null}
     </svg>
   );
 }

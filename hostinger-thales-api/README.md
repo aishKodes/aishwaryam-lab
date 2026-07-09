@@ -53,13 +53,15 @@ const TEACHER_PIN = 'CHANGE_ME_STRONG_TEACHER_PIN';
 const IP_HASH_SALT = 'CHANGE_ME_LONG_RANDOM_IP_HASH_SALT';
 ```
 
-Add your deployed Vercel URL to `ALLOWED_ORIGINS`:
+Confirm these allowed origins in `ALLOWED_ORIGINS`:
 
 ```php
 const ALLOWED_ORIGINS = [
+    'https://aishwaryam-lab.vercel.app',
+    'https://pixtra.site',
+    'https://www.pixtra.site',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
-    'https://your-vercel-app.vercel.app',
 ];
 ```
 

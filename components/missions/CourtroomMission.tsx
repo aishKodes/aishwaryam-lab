@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Check, Eye, Gavel, Send } from "lucide-react";
+import { Check, Gavel, Send } from "lucide-react";
 import { courtCases, criterionLabels } from "@/data/missions";
 import type { Criterion, FeedbackTone, LevelResult } from "@/types/game";
 import { LEVEL_TOTAL, clampScore } from "@/lib/scoring";
@@ -19,7 +19,6 @@ type CourtResponse = {
   caseId: string;
   title: string;
   selected: Criterion;
-  correctAnswer: Criterion;
   isCorrect: boolean;
   trap: boolean;
 };
@@ -38,7 +37,6 @@ export function CourtroomMission({ onComplete }: CourtroomMissionProps) {
   const [selected, setSelected] = useState<Criterion | null>(null);
   const [responses, setResponses] = useState<CourtResponse[]>([]);
   const [feedback, setFeedback] = useState<CourtFeedback | null>(null);
-  const [revealOpen, setRevealOpen] = useState(false);
   const [done, setDone] = useState(false);
 
   const currentCase = courtCases[index];
@@ -61,7 +59,6 @@ export function CourtroomMission({ onComplete }: CourtroomMissionProps) {
       caseId: currentCase.id,
       title: currentCase.title,
       selected,
-      correctAnswer: currentCase.answer,
       isCorrect,
       trap
     };
@@ -70,17 +67,14 @@ export function CourtroomMission({ onComplete }: CourtroomMissionProps) {
     setFeedback({
       title: isCorrect ? "Verdict sustained" : trap ? "Trap objection" : "Verdict overruled",
       tone: isCorrect ? "success" : trap ? "warning" : "danger",
-      body: currentCase.explanation,
+      body: isCorrect
+        ? "Correct. Your ruling has been recorded."
+        : "Not correct. Hint: check whether the evidence gives enough angle pairs or proportional side pairs.",
       isCorrect
     });
   }, [currentCase, done, feedback, selected]);
 
-  const revealCurrent = useCallback(() => {
-    setRevealOpen(true);
-  }, []);
-
   useMissionHotkeys({
-    onReveal: revealCurrent,
     onSubmit: submitVerdict
   });
 
@@ -190,14 +184,6 @@ export function CourtroomMission({ onComplete }: CourtroomMissionProps) {
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
           <SmartButton
             className="flex-1"
-            variant="ghost"
-            icon={<Eye className="h-6 w-6" />}
-            onClick={revealCurrent}
-          >
-            Teacher Reveal
-          </SmartButton>
-          <SmartButton
-            className="flex-1"
             icon={<Send className="h-6 w-6" />}
             disabled={!selected}
             onClick={submitVerdict}
@@ -221,16 +207,6 @@ export function CourtroomMission({ onComplete }: CourtroomMissionProps) {
         <p className="font-mono text-cyan-100">
           Case status: {feedback?.isCorrect ? "correct" : "incorrect"}
         </p>
-      </FeedbackModal>
-
-      <FeedbackModal
-        open={revealOpen}
-        tone="info"
-        title="Teacher reveal"
-        footer={<SmartButton onClick={() => setRevealOpen(false)}>Close</SmartButton>}
-      >
-        <p>Correct ruling: {criterionLabels[currentCase.answer]}</p>
-        <p>{currentCase.explanation}</p>
       </FeedbackModal>
     </div>
   );

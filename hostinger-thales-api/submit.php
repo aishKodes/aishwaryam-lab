@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
 
+handle_preflight();
 require_post();
 $data = read_json_body();
 
