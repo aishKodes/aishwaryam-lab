@@ -2,6 +2,20 @@
 
 A premium individual smartphone activity for Class 10 NCERT Mathematics, focused on the Triangles chapter.
 
+## The Gauss Lab
+
+A separate, teacher-led 35-minute Class X AP discovery lesson is available at
+`/math/class10/ap/gauss-sum` (shortcut: `/gauss-sum`). The existing Thales student
+game and `/teacher` dashboard are unchanged.
+
+The lesson includes seven interactive stages, physical number-card pairing,
+teacher-paced derivation, light/dark presentation modes, classroom assessment,
+offline saving and a six-sheet A4 TLM kit. No login, student data or backend is
+used by the Gauss Lab. Teacher reveals exist only in this presentation module,
+not in the Thales student game.
+
+See [Gauss Lab classroom and deployment guide](docs/gauss-lab.md).
+
 ## Architecture
 
 - Frontend: Next.js App Router, TypeScript, Tailwind CSS, Framer Motion
